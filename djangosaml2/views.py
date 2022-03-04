@@ -17,6 +17,7 @@ import base64
 import logging
 from urllib.parse import quote
 
+import django
 from django.conf import settings
 from django.core.exceptions import PermissionDenied, SuspiciousOperation
 from django.http import (
@@ -400,6 +401,14 @@ class LoginView(SPConfigMixin, View):
 
         # idp hinting support, add idphint url parameter if present in this request
         response = self.add_idp_hinting(http_response) or http_response
+
+        # Adding optional 'Referrer-Policy' header for the browser to set the 'Origin'
+        # header when submitting the SSO AuthNRequest
+        if hasattr(settings, "SAML_DJANGO_AUTHNREQUEST_REFERRER_POLICY"):
+            if int(django.get_version()[0]) < 4:
+                response["Referrer-Policy"] = settings.SAML_DJANGO_AUTHNREQUEST_REFERRER_POLICY
+            else:
+                response.headers["Referrer-Policy"] = settings.SAML_DJANGO_AUTHNREQUEST_REFERRER_POLICY
         return response
 
 
