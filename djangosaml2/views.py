@@ -70,6 +70,7 @@ from .utils import (
     get_fallback_login_redirect_url,
     get_idp_sso_supported_bindings,
     get_location,
+    get_referral_url,
     validate_referral_url,
 )
 
@@ -136,20 +137,6 @@ class LoginView(SPConfigMixin, View):
         "djangosaml2/post_binding_form.html",
     )
 
-    def get_next_path(self, request: HttpRequest) -> str:
-        """Returns the path to put in the RelayState to redirect the user to after having logged in.
-        If the user is already logged in (and if allowed), he will redirect to there immediately.
-        """
-
-        next_path = get_fallback_login_redirect_url()
-        if "next" in request.GET:
-            next_path = request.GET["next"]
-        elif "RelayState" in request.GET:
-            next_path = request.GET["RelayState"]
-
-        next_path = validate_referral_url(request, next_path)
-        return next_path
-
     def unknown_idp(self, request, idp):
         msg = f"Error: IdP EntityID {idp} was not found in metadata"
         logger.error(msg)
@@ -174,7 +161,7 @@ class LoginView(SPConfigMixin, View):
 
     def get(self, request, *args, **kwargs):
         logger.debug("Login process started")
-        next_path = self.get_next_path(request)
+        next_path = validate_referral_url(request, get_referral_url(request))
 
         # if the user is already authenticated that maybe because of two reasons:
         # A) He has this URL in two browser windows and in the other one he

@@ -17,10 +17,11 @@ import re
 import urllib
 import zlib
 from typing import Optional
+from urllib.parse import urlparse
 
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
-from django.http import HttpResponse, HttpResponseRedirect
+from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
 from django.shortcuts import resolve_url
 from django.utils.http import url_has_allowed_host_and_scheme
 
@@ -98,7 +99,16 @@ def get_fallback_login_redirect_url():
     )
 
 
-def validate_referral_url(request, url):
+def get_referral_url(request: HttpRequest) -> str:
+    """Returns the path to put in the RelayState to redirect the user to after having logged in."""
+    if "next" in request.GET:
+        return request.GET["next"]
+    elif "RelayState" in request.GET:
+        return request.GET["RelayState"]
+    return get_fallback_login_redirect_url()
+
+
+def validate_referral_url(request: HttpRequest, url: str) -> str:
     # Ensure the user-originating redirection url is safe.
     # By setting SAML_ALLOWED_HOSTS in settings.py the user may provide a list of "allowed"
     # hostnames for post-login redirects, much like one would specify ALLOWED_HOSTS .
@@ -111,6 +121,45 @@ def validate_referral_url(request, url):
     if not url_has_allowed_host_and_scheme(url=url, allowed_hosts=saml_allowed_hosts):
         return get_fallback_login_redirect_url()
     return url
+
+
+def get_referral_domain(request) -> str or False:
+    url = get_referral_url(request)
+
+    if url.startswith('/'):
+        # The referral url is a path and contains no domain
+        return False
+
+    try:
+        url_info = urlparse(url)
+    except ValueError:  # e.g. invalid IPv6 addresses
+        logger.error(f"Failed to parse referral url: {url}")
+        return False
+
+    return url_info.netloc
+
+
+def is_domain_in_allowed_hosts(domain: str, request: HttpRequest) -> bool:
+    allowed_hosts = set(
+        getattr(settings, "SAML_ALLOWED_HOSTS", [request.get_host()])
+    )
+    if not allowed_hosts:
+        return False
+    return domain in allowed_hosts
+
+
+def get_target_domain(request: HttpRequest) -> str:
+    requested_target_domain = get_referral_domain(request)
+
+    if not requested_target_domain:
+        return settings.SESSION_COOKIE_DOMAIN
+
+    if not is_domain_in_allowed_hosts(requested_target_domain, request):
+        logger.warning("Requested target domain is not in SAML_ALLOWED_HOSTS")
+        return settings.SESSION_COOKIE_DOMAIN
+
+    return requested_target_domain
+
 
 
 def saml2_from_httpredirect_request(url):
