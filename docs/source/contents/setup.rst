@@ -118,11 +118,11 @@ view to djangosaml2 wb path, like ``/saml2/login/``.
 Handling Post-Login Redirects
 =============================
 
-It is often desireable for the client to maintain the URL state (or at least manage it) so that
+It is often desirable for the client to maintain the URL state (or at least manage it) so that
 the URL once authentication has completed is consistent with the desired application state (such
 as retaining query parameters, etc.)  By default, the HttpRequest objects get_host() method is used
 to determine the hostname of the server, and redirect URL's are allowed so long as the destination
-host matches the output of get_host().  However, in some cases it becomes desireable for additional
+host matches the output of get_host().  However, in some cases it becomes desirable for additional
 hostnames to be used for the post-login redirect.  In such cases, the setting::
 
   SAML_ALLOWED_HOSTS = []
