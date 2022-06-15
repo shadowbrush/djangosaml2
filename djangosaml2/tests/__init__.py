@@ -210,8 +210,8 @@ class SAML2Tests(TestCase):
 
     def test_login_evil_redirect(self):
         """
-        Make sure that if we give an URL as the next parameter other than our own host, and one that
-        is not listed in SAML_ALLOWED_HOSTS, it is replaced with the fallback login redirect url.
+        Make sure that if we give an URL other than our own host as the next
+        parameter, it is replaced with the fallback login redirect url.
         """
 
         # monkey patch SAML configuration
@@ -241,32 +241,6 @@ class SAML2Tests(TestCase):
                     params = parse_qs(url.query)
 
                     self.assertEqual(params["RelayState"], ["/dashboard/"])
-
-    def test_login_allowed_redirect(self):
-        """
-        A redirect URL using a domain that is listed in SAML_ALLOWED_HOSTS should
-        be accepted as valid.
-        """
-
-        settings.SAML_ALLOWED_HOSTS = ['allowed.com']
-        settings.SAML_CONFIG = conf.create_conf(
-            sp_host="sp.example.com",
-            idp_hosts=["idp.example.com"],
-            metadata_file="remote_metadata_one_idp.xml",
-        )
-
-        response = self.client.get(
-            reverse("saml2_login") + "?next=http://allowed.com/sample-path"
-        )
-        url = urlparse(response["Location"])
-        params = parse_qs(url.query)
-
-        self.assertEqual(params["RelayState"], ["http://allowed.com/sample-path"])
-
-        # Making sure the cookie domain is set to the target domain:
-        cookie = response.cookies["saml_session"]
-        print("cookie=", cookie)
-        self.assertEqual(cookie["domain"], "allowed.com")
 
     def test_no_redirect(self):
         """

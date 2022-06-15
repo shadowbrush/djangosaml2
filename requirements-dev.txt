@@ -2,5 +2,3 @@ pytest
 pytest-django
 pytest-cov
 codecov
-defusedxml
-pysaml2

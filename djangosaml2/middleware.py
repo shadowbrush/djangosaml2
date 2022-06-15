@@ -9,8 +9,6 @@ from django.utils.http import http_date
 from django.contrib.sessions.backends.base import UpdateError
 from django.contrib.sessions.middleware import SessionMiddleware
 
-from djangosaml2.utils import get_target_domain
-
 django_version = float("{}.{}".format(*VERSION[:2]))
 SAMESITE_NONE = None if django_version < 3.1 else "None"
 
@@ -72,7 +70,7 @@ class SamlSessionMiddleware(SessionMiddleware):
                         request.saml_session.session_key,
                         max_age=max_age,
                         expires=expires,
-                        domain=get_target_domain(request),
+                        domain=settings.SESSION_COOKIE_DOMAIN,
                         path=settings.SESSION_COOKIE_PATH,
                         secure=settings.SESSION_COOKIE_SECURE or None,
                         httponly=settings.SESSION_COOKIE_HTTPONLY or None,
